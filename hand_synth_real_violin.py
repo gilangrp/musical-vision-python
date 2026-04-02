@@ -4,18 +4,17 @@ import numpy as np
 import time
 import pygame
 
-# --- Konfigurasi MediaPipe ---
+# --- MediaPipe configuration ---
 model_path = 'hand_landmarker.task'
 BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
-# --- Audio Setup (Pygame Samples) ---
+# --- Audio Setup  ---
 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 
-# Load sample suara (Pastikan file .wav ada di folder yang sama atau sesuaikan path-nya)
-# Jika tidak ada file, kode ini akan error. Kamu bisa ganti dengan path file kamu.
+# --- Load audio samples ---
 try:
     samples = {
         1: pygame.mixer.Sound("samples/G4.wav"),
@@ -74,12 +73,11 @@ with HandLandmarker.create_from_options(options) as landmarker:
             for i in range(len(detection_result.hand_landmarks)):
                 total_fingers += count_fingers_per_hand(detection_result.hand_landmarks[i], detection_result.handedness[i])
 
-        # Logika Mainkan Sample
+        # Playing samples based on finger count
         if total_fingers in samples and total_fingers != current_finger_count:
             now = time.time()
             if now - last_play > cooldown:
-                # --- PERUBAHAN DI SINI ---
-                # pygame.mixer.stop()  # Hentikan semua suara yang sedang berjalan
+                # pygame.mixer.stop()
                 pygame.mixer.fadeout(150)
                 
                 samples[total_fingers].play()
@@ -88,7 +86,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
                 
         elif total_fingers == 0:
             if current_finger_count != 0:
-                pygame.mixer.stop() # Hentikan suara saat tangan mengepal/hilang
+                pygame.mixer.stop() # stop all sounds immediately when no fingers are detected
             current_finger_count = 0
 
         cv2.putText(frame, f"Fingers: {total_fingers}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
