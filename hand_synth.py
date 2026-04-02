@@ -4,17 +4,17 @@ import numpy as np
 import time
 from synthesizer import Player, Synthesizer, Waveform
 
-# --- Konfigurasi MediaPipe ---
+# --- MediaPipe configuration ---
 model_path = 'hand_landmarker.task'
 BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
-# --- Audio Setup (Synthesizer Library) ---
+# --- Audio Setup  ---
 player = Player()
 player.open_stream()
-# Menggunakan Oscillator 1 (Sawtooth) dan Oscillator 2 (Sine) agar suara lebih tebal
+#  Use Oscillator 1 (Sawtooth) for a richer sound, and Oscillator 2 (Sine) for a smoother tone
 synth = Synthesizer(
     osc1_waveform=Waveform.sawtooth, 
     osc1_volume=0.3, 
@@ -23,14 +23,14 @@ synth = Synthesizer(
     osc2_volume=1
 )
 
-# Nada dari C4 ke E5 (10 Jari)
+# C4 ke E5 (10 fingers)
 note_map = {
     1: "C4", 2: "D4", 3: "E4", 4: "F4", 5: "G4",
     6: "A4", 7: "B4", 8: "C5", 9: "D5", 10: "E5"
 }
 
 last_play = 0
-cooldown = 0.3 # Cooldown dikurangi agar lebih responsif
+cooldown = 0.3
 
 def count_fingers_per_hand(hand_landmarks, handedness):
     fingers = 0
@@ -39,14 +39,14 @@ def count_fingers_per_hand(hand_landmarks, handedness):
     for tip_id in tips_ids:
         if hand_landmarks[tip_id].y < hand_landmarks[tip_id - 2].y:
             fingers += 1
-    # Logika Jempol
-    if label == "Left": # Tangan kiri di layar
+    # Thumb logic
+    if label == "Left": # left hand on screen
         if hand_landmarks[4].x > hand_landmarks[3].x: fingers += 1
-    else: # Tangan kanan di layar
+    else: # right hand on screen
         if hand_landmarks[4].x < hand_landmarks[3].x: fingers += 1
     return fingers
 
-# --- Inisialisasi Deteksi ---
+
 options = HandLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
     running_mode=VisionRunningMode.VIDEO,
@@ -76,17 +76,17 @@ with HandLandmarker.create_from_options(options) as landmarker:
                 handedness = detection_result.handedness[i]
                 total_fingers += count_fingers_per_hand(hand_lms, handedness)
                 
-                # Gambar landmark
+                # Visualize hand landmarks
                 for lm in hand_lms:
                     h, w, _ = frame.shape
                     cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 2, (0, 255, 0), -1)
 
-        # Logika Mainkan Suara
+        # Logic to play notes based on finger count
         if total_fingers in note_map:
             now = time.time()
             if now - last_play > cooldown:
                 current_note = note_map[total_fingers]
-                # Durasi dibuat pendek (0.2) agar tidak bertumpuk terlalu lama
+                # slow down the attack for a smoother sound
                 wave = synth.generate_constant_wave(current_note, 0.2)
                 player.play_wave(wave)
                 last_play = now
